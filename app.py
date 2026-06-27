@@ -50,8 +50,6 @@ with st.expander("➖ Registar Venda"):
                 df = df.drop(ativo_a_vender)
             df.to_csv(caminho_arquivo)
             st.success("Venda registada! Recarrega a página.")
-    else:
-        st.write("Não tens ativos para vender.")
 
 # --- Tabela e Gráfico ---
 st.subheader("Estado Atual")
@@ -72,8 +70,11 @@ if not df.empty:
     # Mostrar Tabela
     st.dataframe(pd.DataFrame(resultados), use_container_width=True)
     
-    # Mostrar Gráfico
-    st.subheader("Distribuição do Portefólio")
-    st.pie_chart(pd.Series(dados_grafico))
+    # Mostrar Gráfico com segurança
+    if dados_grafico:
+        st.subheader("Distribuição do Portefólio")
+        st.pie_chart(pd.Series(dados_grafico))
+    else:
+        st.write("Dados de mercado indisponíveis para o gráfico.")
 else:
-    st
+    st.write("O teu portefólio está vazio.")
