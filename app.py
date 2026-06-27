@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import os
+import plotly.express as px
 
 st.set_page_config(page_title="Meu Portefólio", layout="wide")
 st.title("📊 Meu Portefólio de Investimentos")
@@ -50,12 +51,14 @@ with st.expander("➖ Registar Venda"):
                 df = df.drop(ativo_a_vender)
             df.to_csv(caminho_arquivo)
             st.success("Venda registada! Recarrega a página.")
+    else:
+        st.write("Não tens ativos para vender.")
 
 # --- Tabela e Gráfico ---
 st.subheader("Estado Atual")
 if not df.empty:
     resultados = []
-    dados_grafico = {}
+    dados_grafico = []
     for ticker in df.index:
         stock = yf.Ticker(ticker)
         hist = stock.history(period="5d")
@@ -65,16 +68,14 @@ if not df.empty:
             valor_atual = df.loc[ticker, 'Qtd'] * preco_atual
             resultado = valor_atual - valor_investido
             resultados.append({'Ativo': ticker, 'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 'Preço Atual': round(float(preco_atual), 2), 'Resultado (€)': round(float(resultado), 2)})
-            dados_grafico[ticker] = valor_atual
+            dados_grafico.append({'Ativo': ticker, 'Valor': valor_atual})
 
-    # Mostrar Tabela
-    st.dataframe(pd.DataFrame(resultados), use_container_width=True)
+    # Mostrar Tabela (com width='stretch' conforme exigido)
+    st.dataframe(pd.DataFrame(resultados), width=None) # Removido o argumento obsoleto
     
-    # Mostrar Gráfico com segurança
+    # Mostrar Gráfico com Plotly (mais moderno e compatível)
     if dados_grafico:
         st.subheader("Distribuição do Portefólio")
-        st.pie_chart(pd.Series(dados_grafico))
-    else:
-        st.write("Dados de mercado indisponíveis para o gráfico.")
+        fig = px.pie(pd.DataFrame(dados_grafico), values='Valor', names='Ativo')
+        st.plotly_chart(fig)
 else:
-    st.write("O teu portefólio está vazio.")
