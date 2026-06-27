@@ -2,14 +2,14 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import os
-import plotly.express as px
 
+# Configuração da página
 st.set_page_config(page_title="Meu Portefólio", layout="wide")
 st.title("📊 Meu Portefólio de Investimentos")
 
 caminho_arquivo = "portfolio_dinamico.csv"
 
-# Carregar dados
+# Carregar ou criar ficheiro de dados
 if os.path.exists(caminho_arquivo):
     df = pd.read_csv(caminho_arquivo, index_col=0)
 else:
@@ -19,7 +19,7 @@ else:
 # --- Interface de COMPRA ---
 with st.expander("➕ Adicionar Compra"):
     novos_ativos_input = st.text_input("Ativos (ex: TTE.PA, SAN.MC):")
-    novo_investimento_total = st.number_input("Valor total a investir (€):", min_value=0.0)
+    novo_investimento_total = st.number_input("Valor total a investir (€):", min_value=0.0, step=10.0)
     if st.button("Processar Compra"):
         if novos_ativos_input and novo_investimento_total > 0:
             novos_ativos = [a.strip() for a in novos_ativos_input.split(',')]
@@ -38,7 +38,7 @@ with st.expander("➕ Adicionar Compra"):
                     else:
                         df.loc[ticker] = [qtd_comprada, preco_hoje]
             df.to_csv(caminho_arquivo)
-            st.success("Compra registada! Recarrega a página.")
+            st.rerun()
 
 # --- Interface de VENDA ---
 with st.expander("➖ Registar Venda"):
@@ -50,15 +50,14 @@ with st.expander("➖ Registar Venda"):
             if df.loc[ativo_a_vender, 'Qtd'] <= 0:
                 df = df.drop(ativo_a_vender)
             df.to_csv(caminho_arquivo)
-            st.success("Venda registada! Recarrega a página.")
+            st.rerun()
     else:
-        st.write("Não tens ativos para vender.")
+        st.write("Não existem ativos para vender.")
 
-# --- Tabela e Gráfico ---
-st.subheader("Estado Atual")
+# --- Tabela de Estado Atual ---
+st.subheader("Estado Atual da Carteira")
 if not df.empty:
     resultados = []
-    dados_grafico = []
     for ticker in df.index:
         stock = yf.Ticker(ticker)
         hist = stock.history(period="5d")
@@ -67,15 +66,14 @@ if not df.empty:
             valor_investido = df.loc[ticker, 'Qtd'] * df.loc[ticker, 'Preco_Compra']
             valor_atual = df.loc[ticker, 'Qtd'] * preco_atual
             resultado = valor_atual - valor_investido
-            resultados.append({'Ativo': ticker, 'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 'Preço Atual': round(float(preco_atual), 2), 'Resultado (€)': round(float(resultado), 2)})
-            dados_grafico.append({'Ativo': ticker, 'Valor': valor_atual})
-
-    # Mostrar Tabela (com width='stretch' conforme exigido)
-    st.dataframe(pd.DataFrame(resultados), width=None) # Removido o argumento obsoleto
+            resultados.append({
+                'Ativo': ticker, 
+                'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 
+                'Preço Médio': round(float(df.loc[ticker, 'Preco_Compra']), 2),
+                'Preço Atual': round(float(preco_atual), 2), 
+                'Resultado (€)': round(float(resultado), 2)
+            })
     
-    # Mostrar Gráfico com Plotly (mais moderno e compatível)
-    if dados_grafico:
-        st.subheader("Distribuição do Portefólio")
-        fig = px.pie(pd.DataFrame(dados_grafico), values='Valor', names='Ativo')
-        st.plotly_chart(fig)
+    st.dataframe(pd.DataFrame(resultados), use_container_width=True)
 else:
+    st.info("O teu portefólio está vazio. Adiciona um investimento para começar.")
