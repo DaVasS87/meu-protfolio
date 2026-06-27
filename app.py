@@ -6,14 +6,16 @@ import os
 # Título da Página
 st.title("📊 Meu Portefólio de Investimentos")
 
-# Ficheiro local (no Streamlit Cloud, isto fica na pasta do projeto)
+# Nome do ficheiro que guardará os teus dados
 caminho_arquivo = "portfolio_dinamico.csv"
 
-# Carregar dados
+# Carregar dados ou criar base vazia se não existir
 if os.path.exists(caminho_arquivo):
     df = pd.read_csv(caminho_arquivo, index_col=0)
 else:
     df = pd.DataFrame(columns=['Qtd', 'Preco_Compra'])
+    df.to_csv(caminho_arquivo)
+    st.info("O ficheiro foi criado. Podes começar a adicionar investimentos!")
 
 # --- Interface ---
 st.subheader("Adicionar/Reforçar Investimento")
@@ -41,20 +43,31 @@ if st.button("Processar Compra"):
                     df.loc[ticker] = [qtd_comprada, preco_hoje]
         
         df.to_csv(caminho_arquivo)
-        st.success("Compra registada com sucesso!")
+        st.success("Compra registada com sucesso! Recarrega a página para atualizar.")
+    else:
+        st.warning("Insere pelo menos um ativo e um valor maior que zero.")
 
 # --- Mostrar Tabela ---
 st.subheader("Estado Atual")
-resultados = []
-for ticker in df.index:
-    stock = yf.Ticker(ticker)
-    hist = stock.history(period="5d")
-    if not hist.empty:
-        preco_atual = hist['Close'].iloc[-1]
-        valor_investido = df.loc[ticker, 'Qtd'] * df.loc[ticker, 'Preco_Compra']
-        valor_atual = df.loc[ticker, 'Qtd'] * preco_atual
-        resultado = valor_atual - valor_investido
-        resultados.append({'Ativo': ticker, 'Qtd': round(df.loc[ticker, 'Qtd'], 4), 'Preço Atual': round(preco_atual, 2), 'Resultado (€)': round(resultado, 2)})
-
-df_final = pd.DataFrame(resultados)
-st.dataframe(df_final, use_container_width=True)
+if not df.empty:
+    resultados = []
+    for ticker in df.index:
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period="5d")
+        if not hist.empty:
+            preco_atual = hist['Close'].iloc[-1]
+            valor_investido = df.loc[ticker, 'Qtd'] * df.loc[ticker, 'Preco_Compra']
+            valor_atual = df.loc[ticker, 'Qtd'] * preco_atual
+            resultado = valor_atual - valor_investido
+            resultados.append({'Ativo': ticker, 
+                               'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 
+                               'Preço Atual': round(float(preco_atual), 2), 
+                               'Resultado (€)': round(float(resultado), 2)})
+    
+    if resultados:
+        df_final = pd.DataFrame(resultados)
+        st.dataframe(df_final, use_container_width=True)
+    else:
+        st.write("A carregar preços do mercado...")
+else:
+    st.write("O portefólio está vazio.")
