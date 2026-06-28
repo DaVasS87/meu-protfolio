@@ -73,17 +73,9 @@ for a in df_hist['Ativo'].unique():
         preco = yf.Ticker(a).history(period="1d")['Close'].iloc[-1]
         res.append({'Ativo': a, 'Quantidade': round(qtd, 4), 'Valor Atual (€)': round(qtd * preco, 2)})
 
-# A verificação do if está aqui, garantindo que o else abaixo tenha um if correspondente
 if len(res) > 0:
     col_a, col_b = st.columns(2)
     with col_a:
-        st.write("### Posições Reais")
-        st.dataframe(pd.DataFrame(res), use_container_width=True)
-    with col_b:
-        st.write("### Estratégia (Target)")
-        fig = px.pie(df_metas, values='Percentagem (%)', names='Ativo', hole=0.4)
-        st.plotly_chart(fig)
-else:
-    st.info("Portfólio vazio
+        st.write
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
