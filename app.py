@@ -33,7 +33,7 @@ with st.sidebar:
         st.rerun()
 
 # --- Expander: Compra em Pack ---
-with st.expander("➕ Compra em Pack (Dividir capital pelos ativos)"):
+with st.expander("➕ Compra em Pack"):
     valor_total = st.number_input("Valor total a investir (€):", min_value=0.0, value=500.0)
     ativos_selecionados = st.multiselect("Seleciona os ativos:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"], default=["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
     
@@ -47,9 +47,18 @@ with st.expander("➕ Compra em Pack (Dividir capital pelos ativos)"):
                 qtd = valor_por_ativo / preco_atual
                 nova_linha = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': ['Compra'], 'Ativo': [ativo], 'Qtd': [qtd], 'Preco': [preco_atual]})
                 df_hist = pd.concat([df_hist, nova_linha], ignore_index=True)
-        
         df_hist.to_csv(caminho_transacoes, index=False)
-        st.success("Compra efetuada!")
+        st.rerun()
+
+# --- Expander: Venda ---
+with st.expander("➖ Registar Venda"):
+    ativo_venda = st.selectbox("Ativo a vender:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
+    qtd_venda = st.number_input("Quantidade a vender:", min_value=0.0)
+    preco_venda = st.number_input("Preço de venda:", min_value=0.0)
+    if st.button("Executar Venda"):
+        nova_linha = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': ['Venda'], 'Ativo': [ativo_venda], 'Qtd': [qtd_venda], 'Preco': [preco_venda]})
+        df_hist = pd.concat([df_hist, nova_linha], ignore_index=True)
+        df_hist.to_csv(caminho_transacoes, index=False)
         st.rerun()
 
 # --- Performance ---
@@ -71,11 +80,4 @@ if not df_hist.empty:
             resultados.append({'Ativo': a, 'Qtd': round(float(qtd_total), 4), 'Meta (%)': meta_val, 'Valor Atual (€)': round(float(qtd_total * preco_atual), 2)})
 
     if resultados:
-        col_g1, col_g2 = st.columns(2)
-        with col_g1:
-            st.dataframe(pd.DataFrame(resultados), use_container_width=True)
-        with col_g2:
-            fig = px.pie(pd.DataFrame(resultados), values='Meta (%)', names='Ativo', title='Distribuição de Metas', hole=0.3)
-            st.plotly_chart(fig)
-else:
-    st.info("Regista uma compra para ver os gráficos.")
+        col_g1, col_g2 = st.columns(
