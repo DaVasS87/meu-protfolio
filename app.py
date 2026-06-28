@@ -5,14 +5,14 @@ import os
 from datetime import datetime
 import plotly.express as px
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
+# Configuração da Página
 st.set_page_config(page_title="Gestão de Portfólio", layout="wide")
 st.title("📈 App de Gestão de Portfólio")
 
 DATA_FILE = "transacoes.csv"
 META_FILE = "alocacao.csv"
 
-# --- FUNÇÃO DE RESET/INICIALIZAÇÃO ---
+# --- FUNÇÃO DE INICIALIZAÇÃO ---
 def inicializar_base():
     dados_iniciais = [
         {'Data': datetime.now().strftime("%Y-%m-%d"), 'Tipo': 'Compra', 'Ativo': 'ALV.DE', 'Qtd': 1, 'Preco': 71.16},
@@ -22,13 +22,12 @@ def inicializar_base():
     ]
     pd.DataFrame(dados_iniciais).to_csv(DATA_FILE, index=False)
     pd.DataFrame({'Ativo': ['ALV.DE', 'CVX', 'TTE.PA', 'ZURN.SW'], 'Percentagem (%)': [27, 24, 23, 26]}).to_csv(META_FILE, index=False)
-    st.cache_data.clear()
 
-# Garantir que os ficheiros existem
+# Verificar existência dos arquivos
 if not os.path.exists(DATA_FILE) or not os.path.exists(META_FILE):
     inicializar_base()
 
-# --- SIDEBAR: CONFIGURAÇÕES ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("⚙️ Configurações")
     if st.button("🚨 RESET TOTAL (Estado Inicial)"):
@@ -46,7 +45,7 @@ with st.sidebar:
         pd.concat([df_m, nova], ignore_index=True).to_csv(META_FILE, index=False)
         st.rerun()
 
-# --- EXPANDERS: EXECUÇÃO ---
+# --- EXPANDERS ---
 with st.expander("➕ Operações em Pack"):
     tipo_op = st.radio("Operação:", ["Compra", "Venda"], horizontal=True)
     valor_total = st.number_input("Montante Total (€):", min_value=0.0, value=500.0)
@@ -56,10 +55,12 @@ with st.expander("➕ Operações em Pack"):
         df_h = pd.read_csv(DATA_FILE)
         for ativo in ativos_sel:
             ticker = yf.Ticker(ativo)
-            preco = ticker.history(period="1d")['Close'].iloc[-1]
-            qtd = valor_total / (len(ativos_sel) * preco)
-            nova = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': [tipo_op], 'Ativo': [ativo], 'Qtd': [qtd], 'Preco': [preco]})
-            df_h = pd.concat([df_h, nova], ignore_index=True)
+            hist = ticker.history(period="1d")
+            preco = hist['Close'].iloc[-1] if not hist.empty else 0
+            if preco > 0:
+                qtd = valor_total / (len(ativos_sel) * preco)
+                nova = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': [tipo_op], 'Ativo': [ativo], 'Qtd': [qtd], 'Preco': [preco]})
+                df_h = pd.concat([df_h, nova], ignore_index=True)
         df_h.to_csv(DATA_FILE, index=False)
         st.rerun()
 
@@ -73,12 +74,22 @@ for a in df_hist['Ativo'].unique():
     sub = df_hist[df_hist['Ativo'] == a]
     qtd = sub[sub['Tipo']=='Compra']['Qtd'].sum() - sub[sub['Tipo']=='Venda']['Qtd'].sum()
     if qtd > 0:
-        preco = yf.Ticker(a).history(period="1d")['Close'].iloc[-1]
+        ticker = yf.Ticker(a)
+        hist = ticker.history(period="1d")
+        preco = hist['Close'].iloc[-1] if not hist.empty else 0
         res.append({'Ativo': a, 'Quantidade': round(qtd, 4), 'Valor Atual (€)': round(qtd * preco, 2)})
 
 if len(res) > 0:
     col_a, col_b = st.columns(2)
     with col_a:
-        st.write
+        st.write("### Posições Reais")
+        st.dataframe(pd.DataFrame(res), use_container_width=True)
+    with col_b:
+        st.write("### Estratégia (Target)")
+        fig = px.pie(df_metas, values='Percentagem (%)', names='Ativo', hole=0.4)
+        st.plotly_chart(fig)
+        
+else:
+    st.info("Portfólio vazio.")
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
