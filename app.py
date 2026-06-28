@@ -56,4 +56,25 @@ with st.expander("➖ Registar Venda"):
     qtd_venda = st.number_input("Quantidade a vender:", min_value=0.0)
     preco_venda = st.number_input("Preço de venda:", min_value=0.0)
     if st.button("Executar Venda"):
-        nova_linha = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': ['Venda'], 'Ativo': [ativo_venda], 'Qtd': [qtd_v
+        nova_linha = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': ['Venda'], 'Ativo': [ativo_venda], 'Qtd': [qtd_venda], 'Preco': [preco_venda]})
+        df_hist = pd.concat([df_hist, nova_linha], ignore_index=True)
+        df_hist.to_csv(caminho_transacoes, index=False)
+        st.rerun()
+
+# --- Performance ---
+st.subheader("Performance Atual")
+if not df_hist.empty:
+    ativos = df_hist['Ativo'].unique()
+    resultados = []
+    
+    for a in ativos:
+        sub = df_hist[df_hist['Ativo'] == a]
+        qtd_total = sub[sub['Tipo']=='Compra']['Qtd'].sum() - sub[sub['Tipo']=='Venda']['Qtd'].sum()
+        if qtd_total > 0:
+            custo = (sub[sub['Tipo']=='Compra']['Qtd'] * sub[sub['Tipo']=='Compra']['Preco']).sum()
+            ticker = yf.Ticker(a)
+            hist = ticker.history(period="1d")
+            preco_atual = hist['Close'].iloc[-1] if not hist.empty else 0
+            
+            meta_val = df_metas[df_metas['Ativo']==a]['Meta'].iloc[0] if a in df_metas['Ativo'].values else 0
+            resultados.append({'Ativo': a, 'Qtd': round(float(qtd_total), 4), 'Meta (%)': meta_val, 'Valor Atual (€)': round(
