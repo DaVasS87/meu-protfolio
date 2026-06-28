@@ -80,16 +80,5 @@ for a in df_hist['Ativo'].unique():
         res.append({'Ativo': a, 'Quantidade': round(qtd, 4), 'Valor Atual (€)': round(qtd * preco, 2)})
 
 if len(res) > 0:
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.write("### Posições Reais")
-        st.dataframe(pd.DataFrame(res), use_container_width=True)
-    with col_b:
-        st.write("### Estratégia (Target)")
-        fig = px.pie(df_metas, values='Percentagem (%)', names='Ativo', hole=0.4)
-        st.plotly_chart(fig)
-        
-else:
-    st.info("Portfólio vazio.")
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
