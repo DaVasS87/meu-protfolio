@@ -12,9 +12,8 @@ st.title("📈 App de Gestão de Portfólio")
 DATA_FILE = "transacoes.csv"
 META_FILE = "alocacao.csv"
 
-# --- FUNÇÃO DE INICIALIZAÇÃO (O teu "ponto de partida") ---
+# --- FUNÇÃO DE INICIALIZAÇÃO ---
 def inicializar_base():
-    # Base inicial pedida
     dados_iniciais = [
         {'Data': datetime.now().strftime("%Y-%m-%d"), 'Tipo': 'Compra', 'Ativo': 'ALV.DE', 'Qtd': 1, 'Preco': 71.16},
         {'Data': datetime.now().strftime("%Y-%m-%d"), 'Tipo': 'Compra', 'Ativo': 'CVX', 'Qtd': 1, 'Preco': 63.33},
@@ -22,7 +21,6 @@ def inicializar_base():
         {'Data': datetime.now().strftime("%Y-%m-%d"), 'Tipo': 'Compra', 'Ativo': 'ZURN.SW', 'Qtd': 1, 'Preco': 69.77}
     ]
     pd.DataFrame(dados_iniciais).to_csv(DATA_FILE, index=False)
-    # Metas iniciais (exemplo aproximado)
     pd.DataFrame({'Ativo': ['ALV.DE', 'CVX', 'TTE.PA', 'ZURN.SW'], 'Percentagem (%)': [27, 24, 23, 26]}).to_csv(META_FILE, index=False)
 
 if not os.path.exists(DATA_FILE):
@@ -72,17 +70,20 @@ for a in df_hist['Ativo'].unique():
     sub = df_hist[df_hist['Ativo'] == a]
     qtd = sub[sub['Tipo']=='Compra']['Qtd'].sum() - sub[sub['Tipo']=='Venda']['Qtd'].sum()
     if qtd > 0:
-        # Preço de mercado para cálculo atual
         preco = yf.Ticker(a).history(period="1d")['Close'].iloc[-1]
         res.append({'Ativo': a, 'Quantidade': round(qtd, 4), 'Valor Atual (€)': round(qtd * preco, 2)})
 
-col_a, col_b = st.columns(2)
-with col_a:
-    st.write("### Posições Reais")
-    st.dataframe(pd.DataFrame(res), use_container_width=True)
-with col_b:
-    st.write("### Estratégia (Target)")
-    fig = px.pie(df_metas, values='Percentagem (%)', names='Ativo', hole=0.4)
-    st.plotly_chart(fig)
+# A verificação do if está aqui, garantindo que o else abaixo tenha um if correspondente
+if len(res) > 0:
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.write("### Posições Reais")
+        st.dataframe(pd.DataFrame(res), use_container_width=True)
+    with col_b:
+        st.write("### Estratégia (Target)")
+        fig = px.pie(df_metas, values='Percentagem (%)', names='Ativo', hole=0.4)
+        st.plotly_chart(fig)
+else:
+    st.info("Portfólio vazio
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
