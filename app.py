@@ -3,23 +3,37 @@ import yfinance as yf
 import pandas as pd
 import os
 
-# Configuração da página
 st.set_page_config(page_title="Meu Portefólio", layout="wide")
 st.title("📊 Meu Portefólio de Investimentos")
 
 caminho_arquivo = "portfolio_dinamico.csv"
 
-# Carregar ou criar ficheiro de dados
+# Carregar dados
 if os.path.exists(caminho_arquivo):
     df = pd.read_csv(caminho_arquivo, index_col=0)
 else:
     df = pd.DataFrame(columns=['Qtd', 'Preco_Compra'])
     df.to_csv(caminho_arquivo)
 
+# --- Gestão de Backup (Download/Upload) ---
+col1, col2 = st.columns(2)
+with col1:
+    # Botão para descarregar o ficheiro atual
+    with open(caminho_arquivo, "rb") as file:
+        st.download_button(label="📥 Download Backup", data=file, file_name="meu_portfolio.csv", mime="text/csv")
+
+with col2:
+    # Botão para subir um backup anterior
+    uploaded_file = st.file_uploader("📤 Restaurar Backup", type="csv")
+    if uploaded_file is not None:
+        df_novo = pd.read_csv(uploaded_file, index_col=0)
+        df_novo.to_csv(caminho_arquivo)
+        st.rerun()
+
 # --- Interface de COMPRA ---
 with st.expander("➕ Adicionar Compra"):
     novos_ativos_input = st.text_input("Ativos (ex: TTE.PA, SAN.MC):")
-    novo_investimento_total = st.number_input("Valor total a investir (€):", min_value=0.0, step=10.0)
+    novo_investimento_total = st.number_input("Valor total a investir (€):", min_value=0.0)
     if st.button("Processar Compra"):
         if novos_ativos_input and novo_investimento_total > 0:
             novos_ativos = [a.strip() for a in novos_ativos_input.split(',')]
@@ -52,10 +66,10 @@ with st.expander("➖ Registar Venda"):
             df.to_csv(caminho_arquivo)
             st.rerun()
     else:
-        st.write("Não existem ativos para vender.")
+        st.write("Portefólio vazio.")
 
-# --- Tabela de Estado Atual ---
-st.subheader("Estado Atual da Carteira")
+# --- Tabela ---
+st.subheader("Estado Atual")
 if not df.empty:
     resultados = []
     for ticker in df.index:
@@ -66,14 +80,6 @@ if not df.empty:
             valor_investido = df.loc[ticker, 'Qtd'] * df.loc[ticker, 'Preco_Compra']
             valor_atual = df.loc[ticker, 'Qtd'] * preco_atual
             resultado = valor_atual - valor_investido
-            resultados.append({
-                'Ativo': ticker, 
-                'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 
-                'Preço Médio': round(float(df.loc[ticker, 'Preco_Compra']), 2),
-                'Preço Atual': round(float(preco_atual), 2), 
-                'Resultado (€)': round(float(resultado), 2)
-            })
+            resultados.append({'Ativo': ticker, 'Qtd': round(float(df.loc[ticker, 'Qtd']), 4), 'Preço Atual': round(float(preco_atual), 2), 'Resultado (€)': round(float(resultado), 2)})
     
     st.dataframe(pd.DataFrame(resultados), use_container_width=True)
-else:
-    st.info("O teu portefólio está vazio. Adiciona um investimento para começar.")
