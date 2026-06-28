@@ -75,4 +75,7 @@ if not df_hist.empty:
         with col_g1:
             st.dataframe(pd.DataFrame(resultados), use_container_width=True)
         with col_g2:
-            fig = px.pie(pd.DataFrame(resultados), values='Meta (%)', names='Ativo', title='Distribuição de Metas',
+            fig = px.pie(pd.DataFrame(resultados), values='Meta (%)', names='Ativo', title='Distribuição de Metas', hole=0.3)
+            st.plotly_chart(fig)
+else:
+    st.info("Regista uma compra para ver os gráficos.")
