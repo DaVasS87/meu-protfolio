@@ -23,7 +23,7 @@ def inicializar_base():
     pd.DataFrame(dados_iniciais).to_csv(DATA_FILE, index=False)
     pd.DataFrame({'Ativo': ['ALV.DE', 'CVX', 'TTE.PA', 'ZURN.SW'], 'Percentagem (%)': [27, 24, 23, 26]}).to_csv(META_FILE, index=False)
 
-# Verificar existência dos arquivos
+# Verificar e garantir que os ficheiros existem
 if not os.path.exists(DATA_FILE) or not os.path.exists(META_FILE):
     inicializar_base()
 
@@ -42,7 +42,8 @@ with st.sidebar:
         df_m = pd.read_csv(META_FILE)
         df_m = df_m[df_m['Ativo'] != ativo_alvo]
         nova = pd.DataFrame({'Ativo': [ativo_alvo], 'Percentagem (%)': [pct_alvo]})
-        pd.concat([df_m, nova], ignore_index=True).to_csv(META_FILE, index=False)
+        df_m = pd.concat([df_m, nova], ignore_index=True)
+        df_m.to_csv(META_FILE, index=False)
         st.rerun()
 
 # --- EXPANDERS ---
@@ -80,5 +81,11 @@ for a in df_hist['Ativo'].unique():
         res.append({'Ativo': a, 'Quantidade': round(qtd, 4), 'Valor Atual (€)': round(qtd * preco, 2)})
 
 if len(res) > 0:
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.write("### Posições Reais")
+        st.dataframe(pd.DataFrame(res), use_container_width=True)
+    with col_b:
+        st.write("### Estratégia (Target)")
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
