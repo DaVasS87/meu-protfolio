@@ -25,7 +25,7 @@ def inicializar_base():
 if not os.path.exists(DATA_FILE):
     inicializar_base()
 
-# --- SIDEBAR: OPERAÇÕES ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("Operações")
     valor_input = st.number_input("Valor para investir (€):", min_value=0.1, value=10.0)
@@ -76,14 +76,13 @@ for ativo in df_hist['Ativo'].unique():
         'Resultado (€)': round(variacao, 2)
     })
 
-# Exibição de dados
 df_final = pd.DataFrame(resumo)
 st.dataframe(df_final, use_container_width=True)
 
-# Gráfico
 fig = px.bar(df_final, x='Ativo', y='Resultado (€)', 
              title="Evolução (Lucro/Prejuízo por Ativo)",
              color=df_final['Resultado (€)'] >= 0,
              color_discrete_map={True: 'green', False: 'red'})
+st.plotly_chart(fig)
 st.plotly_chart(fig)
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
