@@ -82,7 +82,9 @@ st.dataframe(df_final, use_container_width=True)
 
 # Gráfico
 fig = px.bar(df_final, x='Ativo', y='Resultado (€)', 
-             title="Evolução (Lucro/Prejuízo por Ativo)")
+             title="Evolução (Lucro/Prejuízo por Ativo)",
+             color=df_final['Resultado (€)'] >= 0,
+             color_discrete_map={True: 'green', False: 'red'})
 st.plotly_chart(fig)
 else:
     st.info("Portfólio vazio. Usa o pack de operações para começar.")
