@@ -5,14 +5,14 @@ import os
 from datetime import datetime
 import plotly.express as px
 
-# Configuração
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Gestão de Portfólio", layout="wide")
 st.title("📈 App de Gestão de Portfólio")
 
 DATA_FILE = "transacoes.csv"
 META_FILE = "alocacao.csv"
 
-# --- FUNÇÃO DE INICIALIZAÇÃO ---
+# --- FUNÇÃO DE RESET/INICIALIZAÇÃO ---
 def inicializar_base():
     dados_iniciais = [
         {'Data': datetime.now().strftime("%Y-%m-%d"), 'Tipo': 'Compra', 'Ativo': 'ALV.DE', 'Qtd': 1, 'Preco': 71.16},
@@ -22,19 +22,21 @@ def inicializar_base():
     ]
     pd.DataFrame(dados_iniciais).to_csv(DATA_FILE, index=False)
     pd.DataFrame({'Ativo': ['ALV.DE', 'CVX', 'TTE.PA', 'ZURN.SW'], 'Percentagem (%)': [27, 24, 23, 26]}).to_csv(META_FILE, index=False)
+    st.cache_data.clear()
 
-if not os.path.exists(DATA_FILE):
+# Garantir que os ficheiros existem
+if not os.path.exists(DATA_FILE) or not os.path.exists(META_FILE):
     inicializar_base()
 
-# --- SIDEBAR ---
+# --- SIDEBAR: CONFIGURAÇÕES ---
 with st.sidebar:
     st.header("⚙️ Configurações")
-    if st.button("🚨 RESET TOTAL (Voltar ao estado inicial)"):
+    if st.button("🚨 RESET TOTAL (Estado Inicial)"):
         inicializar_base()
         st.rerun()
     
     st.divider()
-    st.subheader("🎯 Definir Alocação (Target)")
+    st.subheader("🎯 Definir Estratégia (Target)")
     ativo_alvo = st.selectbox("Ativo:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
     pct_alvo = st.slider("Percentagem desejada (%):", 0, 100, 25)
     if st.button("Gravar Estratégia"):
@@ -44,7 +46,7 @@ with st.sidebar:
         pd.concat([df_m, nova], ignore_index=True).to_csv(META_FILE, index=False)
         st.rerun()
 
-# --- EXPANDERS ---
+# --- EXPANDERS: EXECUÇÃO ---
 with st.expander("➕ Operações em Pack"):
     tipo_op = st.radio("Operação:", ["Compra", "Venda"], horizontal=True)
     valor_total = st.number_input("Montante Total (€):", min_value=0.0, value=500.0)
@@ -53,7 +55,8 @@ with st.expander("➕ Operações em Pack"):
     if st.button("Executar Pack"):
         df_h = pd.read_csv(DATA_FILE)
         for ativo in ativos_sel:
-            preco = yf.Ticker(ativo).history(period="1d")['Close'].iloc[-1]
+            ticker = yf.Ticker(ativo)
+            preco = ticker.history(period="1d")['Close'].iloc[-1]
             qtd = valor_total / (len(ativos_sel) * preco)
             nova = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': [tipo_op], 'Ativo': [ativo], 'Qtd': [qtd], 'Preco': [preco]})
             df_h = pd.concat([df_h, nova], ignore_index=True)
