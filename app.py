@@ -5,16 +5,15 @@ import os
 from datetime import datetime
 
 st.set_page_config(page_title="Meu Portefólio", layout="wide")
-st.title("📊 Portefólio com Histórico")
+st.title("📊 Portefólio com Metas")
 
 caminho_arquivo = "historico_transacoes.csv"
 
-# Garantir que o ficheiro existe sempre
+# Garantir que o ficheiro existe
 if not os.path.exists(caminho_arquivo):
-    df_inicial = pd.DataFrame(columns=['Data', 'Tipo', 'Ativo', 'Qtd', 'Preco'])
+    df_inicial = pd.DataFrame(columns=['Data', 'Tipo', 'Ativo', 'Qtd', 'Preco', 'Meta'])
     df_inicial.to_csv(caminho_arquivo, index=False)
 
-# Carregar histórico
 df_hist = pd.read_csv(caminho_arquivo)
 
 # --- Gestão de Backup ---
@@ -29,60 +28,52 @@ with col2:
         st.rerun()
 
 # --- Adicionar Transação ---
-with st.expander("➕ Adicionar Transação"):
-    col_a, col_b, col_c = st.columns(3)
+with st.expander("➕ Adicionar Operação"):
+    col_a, col_b, col_c, col_d = st.columns(4)
     tipo = col_a.selectbox("Tipo:", ["Compra", "Venda"])
-    ativo = col_b.text_input("Ativo (ex: TTE.PA):").upper()
-    qtd = col_c.number_input("Quantidade:", min_value=0.0)
-    preco = st.number_input("Preço unitário:", min_value=0.0)
+    ativo = col_b.text_input("Ativo:").upper()
+    qtd = col_c.number_input("Qtd:", min_value=0.0)
+    preco = col_d.number_input("Preço unitário (€):", min_value=0.0)
+    meta = st.slider("Meta de alocação (%):", 0, 100, 10)
     
-    if st.button("Guardar Transação"):
-        if ativo and qtd > 0 and preco > 0:
-            nova_linha = pd.DataFrame({'Data': [datetime.now().strftime("%Y-%m-%d")], 'Tipo': [tipo], 'Ativo': [ativo], 'Qtd': [qtd], 'Preco': [preco]})
+    if st.button("Registar"):
+        if ativo and qtd > 0:
+            nova_linha = pd.DataFrame({
+                'Data': [datetime.now().strftime("%Y-%m-%d")], 
+                'Tipo': [tipo], 'Ativo': [ativo], 
+                'Qtd': [qtd], 'Preco': [preco], 'Meta': [meta]
+            })
             df_hist = pd.concat([df_hist, nova_linha], ignore_index=True)
             df_hist.to_csv(caminho_arquivo, index=False)
-            st.success("Transação guardada!")
             st.rerun()
 
-# --- Cálculo de Performance ---
-st.subheader("Performance por Ativo")
+# --- Performance e Metas ---
+st.subheader("Estado Atual e Metas")
 if not df_hist.empty:
     ativos = df_hist['Ativo'].unique()
     resultados = []
     
     for a in ativos:
         subset = df_hist[df_hist['Ativo'] == a]
+        meta_atual = subset['Meta'].iloc[-1] # Pega a última meta definida
+        
         compras = subset[subset['Tipo'] == 'Compra']
         vendas = subset[subset['Tipo'] == 'Venda']
-        
         qtd_total = compras['Qtd'].sum() - vendas['Qtd'].sum()
         
-        # Calcular preço médio ponderado
-        custo_compras = (compras['Qtd'] * compras['Preco']).sum()
-        valor_vendas = (vendas['Qtd'] * vendas['Preco']).sum()
-        custo_liquido = custo_compras - valor_vendas
+        custo_liquido = (compras['Qtd'] * compras['Preco']).sum() - (vendas['Qtd'] * vendas['Preco']).sum()
         
-        preco_medio = custo_liquido / qtd_total if qtd_total > 0 else 0
-        
-        # Preço atual do mercado
-        ticker_info = yf.Ticker(a).history(period="1d")
-        preco_atual = ticker_info['Close'].iloc[-1] if not ticker_info.empty else preco_medio
-        
-        valor_atual = qtd_total * preco_atual
-        lucro_prejuizo = valor_atual - custo_liquido
+        preco_atual = yf.Ticker(a).history(period="1d")
+        p_atual = preco_atual['Close'].iloc[-1] if not preco_atual.empty else (custo_liquido/qtd_total if qtd_total > 0 else 0)
         
         if qtd_total > 0:
             resultados.append({
                 'Ativo': a, 
-                'Qtd': round(float(qtd_total), 4), 
-                'Preço Médio': round(float(preco_medio), 2), 
-                'Preço Atual': round(float(preco_atual), 2),
-                'Resultado (€)': round(float(lucro_prejuizo), 2)
+                'Qtd': round(float(qtd_total), 2), 
+                'Meta (%)': f"{meta_atual}%",
+                'Preço Atual': round(float(p_atual), 2),
+                'Resultado (€)': round(float((qtd_total * p_atual) - custo_liquido), 2)
             })
     
     if resultados:
         st.dataframe(pd.DataFrame(resultados), use_container_width=True)
-    else:
-        st.info("Não tens posições abertas no momento.")
-else:
-    st.info("O teu histórico está vazio. Adiciona a tua primeira transação.")
