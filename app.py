@@ -11,7 +11,6 @@ st.title("📊 Portefólio: Energia e Seguros")
 caminho_transacoes = "historico_transacoes.csv"
 caminho_metas = "metas_alocacao.csv"
 
-# Garantir arquivos
 if not os.path.exists(caminho_transacoes):
     pd.DataFrame(columns=['Data', 'Tipo', 'Ativo', 'Qtd', 'Preco']).to_csv(caminho_transacoes, index=False)
 if not os.path.exists(caminho_metas):
@@ -20,7 +19,6 @@ if not os.path.exists(caminho_metas):
 df_hist = pd.read_csv(caminho_transacoes)
 df_metas = pd.read_csv(caminho_metas)
 
-# --- Sidebar: Metas ---
 with st.sidebar:
     st.header("🎯 Metas de Alocação")
     ativo_meta = st.selectbox("Escolhe o ativo:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
@@ -32,11 +30,9 @@ with st.sidebar:
         df_metas.to_csv(caminho_metas, index=False)
         st.rerun()
 
-# --- Expander: Compra em Pack ---
 with st.expander("➕ Compra em Pack"):
     valor_total = st.number_input("Valor total a investir (€):", min_value=0.0, value=500.0)
     ativos_selecionados = st.multiselect("Seleciona os ativos:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"], default=["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
-    
     if st.button("Executar Compra em Pack"):
         valor_por_ativo = valor_total / len(ativos_selecionados)
         for ativo in ativos_selecionados:
@@ -50,7 +46,6 @@ with st.expander("➕ Compra em Pack"):
         df_hist.to_csv(caminho_transacoes, index=False)
         st.rerun()
 
-# --- Expander: Venda ---
 with st.expander("➖ Registar Venda"):
     ativo_venda = st.selectbox("Ativo a vender:", ["TTE.PA", "ALV.DE", "ZURN.SW", "CVX"])
     qtd_venda = st.number_input("Quantidade a vender:", min_value=0.0)
@@ -61,20 +56,21 @@ with st.expander("➖ Registar Venda"):
         df_hist.to_csv(caminho_transacoes, index=False)
         st.rerun()
 
-# --- Performance ---
 st.subheader("Performance Atual")
 if not df_hist.empty:
     ativos = df_hist['Ativo'].unique()
     resultados = []
-    
     for a in ativos:
         sub = df_hist[df_hist['Ativo'] == a]
         qtd_total = sub[sub['Tipo']=='Compra']['Qtd'].sum() - sub[sub['Tipo']=='Venda']['Qtd'].sum()
         if qtd_total > 0:
-            custo = (sub[sub['Tipo']=='Compra']['Qtd'] * sub[sub['Tipo']=='Compra']['Preco']).sum()
             ticker = yf.Ticker(a)
             hist = ticker.history(period="1d")
             preco_atual = hist['Close'].iloc[-1] if not hist.empty else 0
-            
             meta_val = df_metas[df_metas['Ativo']==a]['Meta'].iloc[0] if a in df_metas['Ativo'].values else 0
-            resultados.append({'Ativo': a, 'Qtd': round(float(qtd_total), 4), 'Meta (%)': meta_val, 'Valor Atual (€)': round(
+            
+            item = {'Ativo': a, 'Qtd': round(float(qtd_total), 4), 'Meta (%)': meta_val, 'Valor Atual (€)': round(float(qtd_total * preco_atual), 2)}
+            resultados.append(item)
+
+    if resultados:
+        col_g1
